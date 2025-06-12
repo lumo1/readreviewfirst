@@ -15,7 +15,6 @@ type Props = {
 };
 
 export default async function ProductPage({ params }: Props) {
-  // --- THIS IS THE FIX ---
   // Await the params object before accessing its properties for dynamic routes.
   const { slug } = await params;
   const uniqueId = slug.join('/');
@@ -54,7 +53,7 @@ export default async function ProductPage({ params }: Props) {
               initialImages={product.images || []} 
               productId={product._id.toString()}
               productName={product.name}
-              category={product.category} // <-- ADD THIS LINE
+              category={product.category}
               initialSearchQuery={product.lastImageSearchQuery || product.name}
             />
 
