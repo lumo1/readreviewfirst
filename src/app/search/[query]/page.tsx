@@ -7,13 +7,19 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import Image from 'next/image';
+<<<<<<< HEAD
 import { Skeleton } from "@/components/ui/skeleton"; // --- CHANGE 1: Import Skeleton for loading state
 
+=======
+
+// The Suggestion interface now includes our new placeholder field
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 interface Suggestion {
   name: string;
   category: string;
   exists: boolean;
   imageUrl?: string | null;
+<<<<<<< HEAD
   placeholderImageUrl?: string | null;
   slug?: string;
 }
@@ -32,6 +38,12 @@ function SuggestionSkeleton() {
   );
 }
 
+=======
+  placeholderImageUrl?: string | null; // <-- MODIFICATION 1: Add the new field
+  slug?: string;
+}
+
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 export default function SearchResultsPage() {
   const params = useParams(); 
   const query = Array.isArray(params.query) ? params.query[0] : params.query;
@@ -41,6 +53,10 @@ export default function SearchResultsPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+<<<<<<< HEAD
+=======
+  // The useEffect hook for fetching data remains exactly the same.
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
   useEffect(() => {
     if (!decodedQuery) {
       setIsLoading(false);
@@ -54,8 +70,11 @@ export default function SearchResultsPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: decodedQuery }),
+<<<<<<< HEAD
           // --- CHANGE 3: Add Next.js caching. Cache results for 1 hour. ---
           next: { revalidate: 3600 } 
+=======
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
         });
         if (!response.ok) {
           throw new Error("Our AI had trouble understanding that. Please try another search.");
@@ -71,6 +90,7 @@ export default function SearchResultsPage() {
     fetchInterpretation();
   }, [decodedQuery]);
 
+<<<<<<< HEAD
   // --- CHANGE 4: Create a dynamic header subtitle based on results ---
   const getHeaderSubtitle = () => {
     if (isLoading || error || suggestions.length === 0) return null;
@@ -107,17 +127,32 @@ export default function SearchResultsPage() {
     if (suggestions.length === 0) {
       return <div className="text-center py-10">No products found for your search. Try another query!</div>;
     }
+=======
+  const renderContent = () => {
+    if (isLoading) { /* ... same loading state ... */ }
+    if (error) { /* ... same error state ... */ }
+    if (suggestions.length === 0) { /* ... same empty state ... */ }
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 
     return (
       <div className="py-6">
         <p className="mb-6 text-gray-600 font-semibold text-center">
+<<<<<<< HEAD
           {getHeaderSubtitle()}
+=======
+          {suggestions.length > 1 ? "Your search is a bit broad. Did you mean one of these?" : "We found a likely match. Ready to generate a review?"}
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
         </p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {suggestions.map((s, i) => {
             const href = s.exists ? `/product/${s.slug}` : `/create?name=${encodeURIComponent(s.name)}&category=${encodeURIComponent(s.category)}`;
             const buttonText = s.exists ? "View Existing Review" : "Generate AI Review";
+<<<<<<< HEAD
+=======
+            
+            // --- MODIFICATION 2: Use the new placeholderImageUrl ---
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
             const displayImageUrl = s.imageUrl || s.placeholderImageUrl;
             const isPlaceholder = !s.imageUrl && s.placeholderImageUrl;
 
@@ -129,11 +164,27 @@ export default function SearchResultsPage() {
                       src={`/api/image-proxy?url=${encodeURIComponent(displayImageUrl)}`}
                       alt={`Image of ${s.name}`}
                       fill
+<<<<<<< HEAD
                       className={`object-cover transition-transform duration-300 group-hover:scale-105 ${isPlaceholder ? 'blur-md' : ''}`}
                     />
                   ) : (
                     <div className="w-full h-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">No Image</div>
                   )}
+=======
+                      // Conditionally apply blur and other styles if it's a placeholder
+                      className={`
+            object-cover 
+            transition-transform duration-300 group-hover:scale-105 
+            ${isPlaceholder ? 'blur-md' : ''}
+          `}
+                    />
+                  ) : (
+                    // Fallback for when no image of any kind could be found
+                    <div className="w-full h-full bg-slate-200 flex items-center justify-center text-xs text-slate-500">No Image</div>
+                  )}
+
+                  {/* Show the "Generate" overlay ONLY if it's a placeholder */}
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
                   {isPlaceholder && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white p-2 text-center">
                       <p className="font-bold text-lg">Generate Review</p>
@@ -141,9 +192,17 @@ export default function SearchResultsPage() {
                     </div>
                   )}
                 </div>
+<<<<<<< HEAD
                 <CardContent className="p-4 flex flex-col flex-grow">
                   <p className="font-bold text-lg flex-grow">{s.name}</p>
                   <p className="text-sm text-gray-500 mb-4">{s.category}</p>
+=======
+                
+                <CardContent className="p-4 flex flex-col flex-grow">
+                  <p className="font-bold text-lg flex-grow">{s.name}</p>
+                  <p className="text-sm text-gray-500 mb-4">{s.category}</p>
+                  
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
                   <Button asChild className={`w-full mt-auto ${s.exists ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
                     <Link href={href}>
                       {buttonText}

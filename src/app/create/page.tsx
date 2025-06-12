@@ -1,4 +1,5 @@
 // src/app/create/page.tsx
+<<<<<<< HEAD
 "use client";
 
 import { Button } from '@/components/ui/button';
@@ -21,12 +22,37 @@ export default function CreatePage() {
 
   useEffect(() => {
     // This effect will still run twice in dev mode, but our lock will handle it.
+=======
+"use client"; // This page must be a Client Component to use hooks
+
+import { Button } from '@/components/ui/button';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+export default function CreatePage() {
+  // Hooks to read URL parameters and control navigation
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Get the product name from the URL query string
+  
+  const name = searchParams.get('name');
+  const category = searchParams.get('category');
+  
+  // State to manage the feedback message shown to the user
+  const [status, setStatus] = useState("Initializing...");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs once when the component mounts
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     if (!name || !category) {
       setError("No product query provided. Please go back and try a new search.");
       return;
     }
 
     const createProduct = async () => {
+<<<<<<< HEAD
       // --- THE ROBUST LOCK ---
       // If our ref flag is true, it means we've already started, so we exit immediately.
       if (hasSubmitted.current) {
@@ -42,10 +68,20 @@ export default function CreatePage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productName: name, category: category }),
+=======
+      setStatus(`Generating a page for "${name}" in category "${category}"...`);
+      try {
+        // Call the backend API we created in Step 1
+        const response = await fetch('/api/create-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productName: name, category: category}),
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
         });
 
         const data = await response.json();
 
+<<<<<<< HEAD
         if (response.ok) { // Check for any 2xx status
           setStatus("Success! Redirecting you to the page...");
           // Use replace instead of push to prevent the user from clicking "back" to this loading page.
@@ -59,12 +95,31 @@ export default function CreatePage() {
         setError(`Failed to create product page: ${e.message}`);
         // We don't reset the lock here, because the process failed.
         // The user should go back and try again from the search page.
+=======
+         if (response.status === 201) { // 201 Created
+          setStatus("Success! New page generated. Redirecting...");
+          router.push(`/product/${data.product._id}`);
+        } else if (response.status === 200) { // 200 OK (Already Existed)
+          setStatus("This product already exists! Redirecting you to the page...");
+          router.push(`/product/${data.product._id}`);
+        } else { // Handle actual errors
+          setError(`Error: ${data.error || "An unknown error occurred."}`);
+        }
+        
+      } catch (e) {
+        console.error("Fetch error:", e);
+        setError("Failed to connect to the server. Please check your connection and try again.");
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
       }
     };
 
     createProduct();
+<<<<<<< HEAD
     // The dependency array is now much cleaner and more stable.
   }, [name, category, router]);
+=======
+  }, [name, category, router]); // The effect depends on the query and router
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
@@ -78,6 +133,10 @@ export default function CreatePage() {
         </div>
       ) : (
         <>
+<<<<<<< HEAD
+=======
+          {/* A simple spinning loader */}
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mb-6"></div>
           <h1 className="text-2xl font-bold">Please wait</h1>
           <p className="mt-2 text-lg text-gray-600">{status}</p>

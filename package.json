@@ -13,7 +13,10 @@
     "@radix-ui/react-slot": "^1.2.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+<<<<<<< HEAD
     "dotenv": "^16.5.0",
+=======
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     "embla-carousel-react": "^8.6.0",
     "lucide-react": "^0.513.0",
     "mongodb": "^6.17.0",
@@ -21,13 +24,19 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+<<<<<<< HEAD
     "remark-gfm": "^4.0.1",
+=======
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+<<<<<<< HEAD
     "@tailwindcss/typography": "^0.5.16",
+=======
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

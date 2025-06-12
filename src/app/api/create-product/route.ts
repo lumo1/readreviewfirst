@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MongoClient } from "mongodb";
 import { Product } from "@/lib/types";
 
+<<<<<<< HEAD
 // --- HELPER FUNCTIONS ---
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
@@ -22,13 +23,22 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
   throw new Error("All retries failed.");
 }
 
+=======
+// Helper function to fetch product images from Google Custom Search API.
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 async function getProductImages(query: string): Promise<string[]> {
   const apiKey = process.env.GOOGLE_API_KEY;
   const searchEngineId = process.env.SEARCH_ENGINE_ID;
   const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(query)}&searchType=image&num=5`;
+<<<<<<< HEAD
   try {
     const response = await fetch(url);
     if (!response.ok) return [];
+=======
+
+  try {
+    const response = await fetch(url);
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     const data = await response.json();
     if (!data.items || data.items.length === 0) return [];
     return data.items.map((item: { link: string }) => item.link);
@@ -38,6 +48,7 @@ async function getProductImages(query: string): Promise<string[]> {
   }
 }
 
+<<<<<<< HEAD
 async function generateEmbedding(text: string): Promise<number[]> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
   const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
@@ -48,10 +59,19 @@ async function generateEmbedding(text: string): Promise<number[]> {
 
 export async function POST(req: Request) {
   const { productName, category } = await req.json();
+=======
+export async function POST(req: Request) {
+  const { productName, category } = await req.json();
+
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
   if (!productName || !category) {
     return new Response(JSON.stringify({ error: "Product name and category are required." }), { status: 400 });
   }
 
+<<<<<<< HEAD
+=======
+  // Create a URL-friendly slug for the category and product name to form a unique ID.
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
   const productSlug = productName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const categorySlug = category.toLowerCase().replace(/\s+/g, '-');
   const uniqueId = `${categorySlug}/${productSlug}`;
@@ -63,11 +83,16 @@ export async function POST(req: Request) {
     const db = client.db("readreviewfirst");
     const productsCollection = db.collection<Product>("products");
 
+<<<<<<< HEAD
+=======
+    // Before creating, check if a product with this unique ID already exists.
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     const existingProduct = await productsCollection.findOne({ _id: uniqueId });
     if (existingProduct) {
       return new Response(JSON.stringify({ message: "Product already exists.", product: existingProduct }), { status: 200 });
     }
 
+<<<<<<< HEAD
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     
@@ -83,14 +108,45 @@ export async function POST(req: Request) {
     const generationResult = await withRetry(() => model.generateContent(prompt));
     const responseText = generationResult.response.text();
     const jsonString = responseText.substring(responseText.indexOf('{'), responseText.lastIndexOf('}') + 1);
+=======
+    // --- AI-Powered Content Generation ---
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    // The final, detailed prompt to get a structured JSON response from the AI.
+    const prompt = `
+      You are an expert API. Your only function is to return a valid JSON object. Do not include any introductory text, markdown formatting, or explanations.
+      The user wants a review for: "${productName}".
+      Your task is to generate a JSON object with two keys:
+      1.  "reviewText": A concise, balanced, and informative review of the most likely specific product for the query. Include "Pros" and "Cons" as bullet points.
+      2.  "imageSearchQuery": A concise, optimized query for Google Image Search to find official product photos for that specific product.
+      
+      Your response must be ONLY the raw JSON object.
+    `;
+    
+    const generationResult = await model.generateContent(prompt);
+    const responseText = generationResult.response.text();
+    
+    // Robustly parse the JSON from the AI's response.
+    const jsonStart = responseText.indexOf('{');
+    const jsonEnd = responseText.lastIndexOf('}') + 1;
+    const jsonString = responseText.substring(jsonStart, jsonEnd);
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     const aiResponse = JSON.parse(jsonString);
 
     const reviewText = aiResponse.reviewText;
     const imageSearchQuery = aiResponse.imageSearchQuery;
 
+<<<<<<< HEAD
     const images = await withRetry(() => getProductImages(imageSearchQuery));
     const embedding = await withRetry(() => generateEmbedding(productName));
 
+=======
+    // Fetch images using the AI-generated search query.
+    const images = await getProductImages(imageSearchQuery);
+
+    // Assemble the complete new product document.
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     const newProduct: Product = {
       _id: uniqueId,
       name: productName,
@@ -102,6 +158,7 @@ export async function POST(req: Request) {
       verification_score: 0,
       upvotes: 0,
       downvotes: 0,
+<<<<<<< HEAD
       productEmbedding: embedding,
       lastImageSearchQuery: imageSearchQuery,
     };
@@ -111,6 +168,17 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Failed to create product:", error.message);
+=======
+    };
+
+    // This call is now fully type-safe, no 'as any' needed.
+    await productsCollection.insertOne(newProduct);
+
+    return new Response(JSON.stringify({ message: "Product created successfully.", product: newProduct }), { status: 201 });
+
+  } catch (error) {
+    console.error("Failed to create product:", error);
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
     return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   } finally {
     await client.close();
