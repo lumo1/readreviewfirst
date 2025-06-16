@@ -59,7 +59,7 @@ export default function SuggestionCard({ suggestion }: { suggestion: Suggestion 
 
         {hasImage && (
           <ImageWithFallback
-            src={`/api/image-proxy?url=${encodeURIComponent(suggestion.imageUrl!)}`}
+            src={suggestion.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(suggestion.imageUrl!)}` : ''}
             alt={`Image of ${suggestion.name}`}
             fill
             sizes="(max-width: 640px) 100vw, 33vw"

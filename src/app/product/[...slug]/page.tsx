@@ -3,81 +3,78 @@ import { notFound } from "next/navigation";
 import { MongoClient, WithId } from "mongodb";
 import { Product } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import ProductImageGallery from "@/components/ProductImageGallery";
+import ReviewCallout from "@/components/ReviewCallout";
+import StarRating from "@/components/StarRating";
+import ProsConsPills from "@/components/ProsConsPills";
+import TwoColMarkdown from "@/components/TwoColMarkdown";
+import ReviewActions from "@/components/ReviewActions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import ProductImageGallery from "@/components/ProductImageGallery";
-import ReviewActions from "@/components/ReviewActions";
 
-type Props = {
-  params: { slug: string[] };
-};
+type Props = { params: { slug: string[] } };
 
 export default async function ProductPage({ params }: Props) {
-  // 🛠️ Next.js requires awaiting the params object for dynamic routes
+  // await the dynamic params as per Next13
   const { slug } = await params;
   const uniqueId = slug.join("/");
 
   const client = new MongoClient(process.env.MONGODB_URI || "");
   let product: WithId<Product> | null = null;
-
   try {
     await client.connect();
-    const db = client.db("readreviewfirst");
-    const productsCollection = db.collection<Product>("products");
-    product = await productsCollection.findOne({ _id: uniqueId });
+    product = await client.db("readreviewfirst")
+                          .collection<Product>("products")
+                          .findOne({ _id: uniqueId });
   } finally {
     await client.close();
   }
-
-  if (!product) {
-    notFound();
-  }
+  if (!product) return notFound();
 
   return (
-    <main className="flex justify-center min-h-screen p-4 sm:p-8 bg-gray-50">
+    <main className="flex justify-center bg-gray-50 p-8">
       <div className="w-full max-w-4xl">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-3xl font-bold text-center">
-              {product.name}
-            </CardTitle>
-            <p className="text-center text-sm text-gray-500 pt-2">
-              AI-Generated Review & Analysis
-            </p>
+          <CardHeader className="text-center">
+            <CardTitle className="text-4xl">{product.name}</CardTitle>
+            <ReviewCallout summary={product.review.shortSummary} />
+            <StarRating rating={product.review.rating} />
           </CardHeader>
+
           <CardContent>
             <ProductImageGallery
-              initialImages={product.images || []}
-              productId={product._id.toString()}
+              initialImages={product.images}
+              productId={product._id}
               productName={product.name}
               category={product.category}
-              initialSearchQuery={product.lastImageSearchQuery || product.name}
+              initialSearchQuery={product.lastImageSearchQuery}
             />
 
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">AI-Generated Summary</h2>
-              <div className="prose prose-sm md:prose-base max-w-none p-6 bg-slate-100 rounded-lg">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {product.review}
-                </ReactMarkdown>
-              </div>
+              <h2 className="text-2xl font-semibold mb-4">Pros & Cons</h2>
+              <ProsConsPills pros={product.review.pros} cons={product.review.cons} />
+            </div>
+
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Full Review</h2>
+              <TwoColMarkdown markdown={product.review.detailedReview} />
             </div>
 
             <ReviewActions
-              productId={product._id.toString()}
-              initialScore={product.verification_score || 0}
+              productId={product._id}
+              initialScore={product.verification_score}
             />
 
-            <div className="text-center mt-10">
+            <div className="text-center mt-8">
               <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
                 <Link
-                  href={product.affiliateUrl || "#"}
+                  href={product.affiliateUrl}
                   target="_blank"
                   rel="noopener noreferrer"
+                  className="block truncate max-w-xs text-center"
+                  title={product.review.cta}  // tooltip on overflow
                 >
-                  Check Price & Availability
+                  {product.review.cta}
                 </Link>
               </Button>
             </div>
