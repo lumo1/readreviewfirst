@@ -1,4 +1,8 @@
 // src/app/api/image-proxy/route.ts
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 72a3fcc6448439a8dc02337b5b40a80617202a73
 import { NextRequest, NextResponse } from "next/server";
 
 // A simple helper function to validate if a string is a well-formed URL
@@ -54,5 +58,38 @@ export async function GET(req: NextRequest) {
       cause: error.cause,
     });
     return new NextResponse("An error occurred while proxying the image.", { status: 500 });
+<<<<<<< HEAD
+=======
+=======
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const imageUrl = searchParams.get('url');
+
+  if (!imageUrl) {
+    return new NextResponse('URL parameter is missing', { status: 400 });
+  }
+
+  try {
+    const imageResponse = await fetch(imageUrl);
+
+    if (!imageResponse.ok) {
+      return new NextResponse('Failed to fetch image', { status: imageResponse.status });
+    }
+
+    const contentType = imageResponse.headers.get('content-type') || 'application/octet-stream';
+    const imageBuffer = await imageResponse.arrayBuffer();
+
+    return new NextResponse(imageBuffer, {
+      status: 200,
+      headers: { 'Content-Type': contentType },
+    });
+
+  } catch (error) {
+    console.error("Image proxy error:", error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+>>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
+>>>>>>> 72a3fcc6448439a8dc02337b5b40a80617202a73
   }
 }
