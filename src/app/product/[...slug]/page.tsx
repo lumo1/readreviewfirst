@@ -4,9 +4,9 @@ import { MongoClient, WithId } from "mongodb";
 import { Product } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from 'next/link';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import ProductImageGallery from "@/components/ProductImageGallery";
 import ReviewActions from "@/components/ReviewActions";
 
@@ -15,8 +15,9 @@ type Props = {
 };
 
 export default async function ProductPage({ params }: Props) {
-  const { slug } = params;
-  const uniqueId = slug.join('/');
+  // 🛠️ Next.js requires awaiting the params object for dynamic routes
+  const { slug } = await params;
+  const uniqueId = slug.join("/");
 
   const client = new MongoClient(process.env.MONGODB_URI || "");
   let product: WithId<Product> | null = null;
@@ -46,10 +47,9 @@ export default async function ProductPage({ params }: Props) {
               AI-Generated Review & Analysis
             </p>
           </CardHeader>
-
           <CardContent>
-            <ProductImageGallery 
-              initialImages={product.images || []} 
+            <ProductImageGallery
+              initialImages={product.images || []}
               productId={product._id.toString()}
               productName={product.name}
               category={product.category}
@@ -59,20 +59,24 @@ export default async function ProductPage({ params }: Props) {
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-4">AI-Generated Summary</h2>
               <div className="prose prose-sm md:prose-base max-w-none p-6 bg-slate-100 rounded-lg">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}> 
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {product.review}
                 </ReactMarkdown>
               </div>
             </div>
 
-            <ReviewActions 
-              productId={product._id.toString()} 
+            <ReviewActions
+              productId={product._id.toString()}
               initialScore={product.verification_score || 0}
             />
 
             <div className="text-center mt-10">
               <Button asChild size="lg" className="bg-green-600 hover:bg-green-700">
-                <Link href={product.affiliateUrl || '#'} target="_blank" rel="noopener noreferrer">
+                <Link
+                  href={product.affiliateUrl || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Check Price & Availability
                 </Link>
               </Button>

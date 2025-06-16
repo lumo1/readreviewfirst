@@ -1,66 +1,82 @@
 // src/app/api/interpret-search/route.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { NextRequest, NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
-import { Product } from "@/lib/types";
-
-// --- HELPER FUNCTIONS ---
-async function generateEmbedding(text: string): Promise<number[]> {
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
-  const embeddingModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
-  const result = await embeddingModel.embedContent(text);
-  return result.embedding.values;
-}
-
-async function getProductImage(productName: string, category: string): Promise<string | null> {
-  const apiKey = process.env.GOOGLE_API_KEY;
-  const searchEngineId = process.env.SEARCH_ENGINE_ID;
-  if (!apiKey || !searchEngineId) {
-    console.error("CRITICAL: GOOGLE_API_KEY or SEARCH_ENGINE_ID is not set.");
-    return null;
-  }
-
-  const query = `${productName} ${category} product photo`;
-  const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${searchEngineId}&q=${encodeURIComponent(
-    query
-  )}&searchType=image&num=1`;
-
-  try {
-    const response = await fetch(url);
-    const raw = await response.text();
-    if (!response.ok) {
-      console.error(`[getProductImage] FAILED for "${query}" status=${response.status}`, raw);
-      return null;
-    }
-
-    const data = JSON.parse(raw);
-    if (!data.items?.length) return null;
-
-    const item = data.items[0];
-    // Method 1: MIME type check
-    if (item.mime?.startsWith("image/")) {
-      return item.link;
-    }
-    // Method 2: extension fallback
-    try {
-      const parsed = new URL(item.link);
-      const ext = parsed.pathname.split('.').pop()?.toLowerCase();
-      if (ext && ["jpg","jpeg","png","gif","webp","svg"].includes(ext)) {
-        return item.link;
-      }
-    } catch {
-      /* ignore invalid URL */
-    }
-    return null;
-  } catch (err) {
-    console.error(`[getProductImage] ERROR for "${query}":`, err);
-    return null;
-  }
-}
+import { NextRequest, NextResponse }   from "next/server";
+import { MongoClient }                 from "mongodb";
+import { Product }                     from "@/lib/types";
 
 type ProductWithScore = Product & { score: number };
 
-// --- MAIN API ROUTE ---
+// ————————————————————————————————————————————————————————————————
+// 1) HELPER: Embedding
+async function generateEmbedding(text: string): Promise<number[]> {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
+  const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+  const res   = await model.embedContent(text);
+  return res.embedding.values;
+}
+
+// ————————————————————————————————————————————————————————————————
+// 2) HELPER: Google Custom Search (for EXISTING products only)
+async function getGoogleImage(productName: string, category: string): Promise<string|null> {
+  const apiKey        = process.env.GOOGLE_API_KEY;
+  const searchEngine = process.env.SEARCH_ENGINE_ID;
+  if (!apiKey || !searchEngine) return null;
+
+  const q   = `${productName} ${category} product photo`;
+  const url = `https://www.googleapis.com/customsearch/v1?` +
+              `key=${apiKey}&cx=${searchEngine}` +
+              `&q=${encodeURIComponent(q)}` +
+              `&searchType=image&num=1`;
+
+  try {
+    const r    = await fetch(url);
+    const txt  = await r.text();
+    if (!r.ok) {
+      console.warn(`[getGoogleImage] failed ${r.status} for “${q}”`);
+      return null;
+    }
+    const js   = JSON.parse(txt);
+    const item = js.items?.[0];
+    if (!item) return null;
+    // trust mime or extension
+    if (item.mime?.startsWith("image/")) return item.link;
+    const ext = new URL(item.link).pathname.split(".").pop()?.toLowerCase();
+    if (ext && ["jpg","jpeg","png","gif","webp","svg"].includes(ext)) return item.link;
+  } catch (e) {
+    console.error("[getGoogleImage] error", e);
+  }
+  return null;
+}
+
+// ————————————————————————————————————————————————————————————————
+// 3) HELPER: Unsplash (for NEW products / placeholders)
+async function getUnsplashImage(productName: string, category: string): Promise<string|null> {
+  const key = process.env.UNSPLASH_ACCESS_KEY;
+  if (!key) return null;
+
+  const q   = `${productName} ${category}`;
+  const url = `https://api.unsplash.com/search/photos` +
+              `?query=${encodeURIComponent(q)}` +
+              `&per_page=1&orientation=squarish`;
+
+  try {
+    const r  = await fetch(url, {
+      headers: { Authorization: `Client-ID ${key}` }
+    });
+    if (!r.ok) {
+      console.warn(`[getUnsplashImage] ${r.status} searching “${q}”`);
+      return null;
+    }
+    const js = await r.json();
+    return js.results?.[0]?.urls?.small || null;
+  } catch (e) {
+    console.error("[getUnsplashImage] error", e);
+    return null;
+  }
+}
+
+// ————————————————————————————————————————————————————————————————
+// MAIN
 export async function POST(req: NextRequest) {
   const { query } = await req.json();
   if (!query) {
@@ -69,86 +85,95 @@ export async function POST(req: NextRequest) {
 
   const client = new MongoClient(process.env.MONGODB_URI || "");
   try {
-    // 1) Embed and vector-search existing products
+    // 1) embed & vector‐search existing
     const queryEmbedding = await generateEmbedding(query);
     await client.connect();
-    const db = client.db("readreviewfirst");
-    const products = db.collection<Product>("products");
+    const db      = client.db("readreviewfirst");
+    const coll    = db.collection<Product>("products");
+    const textIds = await coll
+      .find({ $text: { $search: query } }, { projection: { _id: 1 } })
+      .map(d => d._id)
+      .toArray();
+    
+    let existing: ProductWithScore[] = [];
+    if (textIds.length) {
+      existing = await coll.aggregate<ProductWithScore>([
+        {
+          $vectorSearch: {
+            index: "vector_index",
+            path: "productEmbedding",
+            queryVector: queryEmbedding,
+            filter: { _id: { $in: textIds } },
+            numCandidates: 50,
+            limit: 5
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            name: 1,
+            category: 1,
+            images: 1,
+            score: { $meta: "vectorSearchScore" }
+          }
+        }
+      ]).toArray();
+    }
 
-    const vectorSearchPromise = (async () => {
-      const ids = await products
-        .find({ $text: { $search: query } }, { projection: { _id: 1 } })
-        .map((d) => d._id)
-        .toArray();
-      if (!ids.length) return [];
-      return products
-        .aggregate<ProductWithScore>([
-          {
-            $vectorSearch: {
-              index: "vector_index",
-              path: "productEmbedding",
-              queryVector: queryEmbedding,
-              filter: { _id: { $in: ids } },
-              numCandidates: 100,
-              limit: 5,
-            },
-          },
-          { $project: { _id: 1, name: 1, category: 1, images: 1, score: { $meta: "vectorSearchScore" } } },
-        ])
-        .toArray();
-    })();
-
-    // 2) Ask Gemini for up to 4 new product ideas
+    // 2) generate up to 4 new ideas via Gemini
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = `Brainstorm up to 4 specific, likely product names related to the search query: "${query}". Return a valid JSON array of objects, each with "name" and "category".`;
-    const aiSuggestionPromise = model
+    const prompt = `Brainstorm up to 4 specific, likely product names related to "${query}".` +
+                   ` Return a JSON array, each with "name" and "category".`;
+    const aiJson = await model
       .generateContent(prompt)
-      .then((r) => JSON.parse(r.response.text().replace(/```json\n|```/g, "").trim()))
-      .catch((err) => {
-        console.error("AI suggestion failed:", err);
+      .then(r => JSON.parse(
+        r.response.text().replace(/```json\n|```/g, "").trim()
+      ))
+      .catch(e => {
+        console.error("[AI] suggestion failed", e);
         return [];
       });
 
-    const [existing, aiIdeas] = await Promise.all([vectorSearchPromise, aiSuggestionPromise]);
-
-    // 3) Map existing → our response format
-    const finalSuggestions = existing.map((p) => ({
+    // 3) dedupe & format “existing”
+    const formattedExisting = existing.map(p => ({
       name: p.name,
       category: p.category,
       exists: true,
       imageUrl: p.images?.[0] || null,
       slug: p._id,
+      score: p.score
     }));
-    const seen = new Set(finalSuggestions.map((s) => s.slug));
+    const seen = new Set(formattedExisting.map(x => x.slug));
 
-    // 4) Filter out duplicates
-    const newIdeas = aiIdeas.filter((s: any) => {
-      const slug = `${s.category.toLowerCase().replace(/\s+/g, "-")}/${s.name.toLowerCase().replace(/[^a-z0-9-]/g, "")}`;
+    // 4) for each new idea → only unsplash
+    const newOnes = aiJson.filter((s: any) => {
+      const slug = `${s.category}`.toLowerCase()
+                   .replace(/\s+/g, "-")
+                   .replace(/[^a-z0-9-]/g, "");
       return !seen.has(slug);
     });
 
-    // 5) Rate-limited loop for placeholder fetch
-    const newSuggestions: Array<{ name: string; category: string; exists: false; imageUrl: string | null }> = [];
-    for (const idea of newIdeas) {
-      const img = await getProductImage(idea.name, idea.category);
+    const newSuggestions = [];
+    for (const idea of newOnes) {
+      const placeholder = await getUnsplashImage(idea.name, idea.category);
       newSuggestions.push({
         name: idea.name,
         category: idea.category,
         exists: false,
-        imageUrl: img,
+        imageUrl: placeholder
       });
-      await new Promise((r) => setTimeout(r, 300));
+      // be nice to Unsplash
+      await new Promise(r => setTimeout(r, 250));
     }
 
-    // 6) Return combined list
     return NextResponse.json({
       query_type: "hybrid_filtered",
-      suggestions: [...finalSuggestions, ...newSuggestions],
+      suggestions: [...formattedExisting, ...newSuggestions]
     });
-  } catch (err: any) {
-    console.error("Critical Interpret search error:", err);
-    return NextResponse.json({ error: "AI had trouble understanding. Please try again." }, { status: 500 });
+  } catch (e: any) {
+    console.error("Interpret search error:", e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   } finally {
     await client.close();
   }
