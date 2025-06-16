@@ -12,9 +12,6 @@ export interface Product {
   verification_score: number;
   upvotes: number;
   downvotes: number;
-<<<<<<< HEAD
   productEmbedding?: number[];
   lastImageSearchQuery?: string; 
-=======
->>>>>>> 0c5de07fcdeef2d115c20d12a6a065d9dcbee33a
 }
