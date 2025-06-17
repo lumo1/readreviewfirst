@@ -1,7 +1,5 @@
 // src/lib/types.ts
 
-import { ObjectId } from "mongodb";
-
 /**
  * A single “snapshot” of an AI‐generated review.
  */

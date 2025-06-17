@@ -2,27 +2,7 @@
 import { MongoClient, WithId } from 'mongodb';
 import { NextRequest, NextResponse } from 'next/server';
 import { Product } from '@/lib/types';
-import { slugify } from '@/lib/slugify'; // if you ever need it
 
-// 1) Retry helper
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = 2,
-  delay = 500
-): Promise<T> {
-  let lastErr: any;
-  for (let i = 0; i <= retries; i++) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      if (i < retries) {
-        await new Promise(r => setTimeout(r, delay * 2 ** i));
-      }
-    }
-  }
-  throw lastErr;
-}
 
 // 2) Build the AI prompt
 function buildAIPrompt(name: string, category: string) {
@@ -63,7 +43,7 @@ export async function POST(req: NextRequest) {
   const client = new MongoClient(uri);
   try {
     await client.connect();
-    const products = client.db('readreviewfirst').collection<WithId<Product>>('products');
+    const products = client.db('readreviewfirst').collection<WithId<Product & { aiImageGeneratedAt?: string | Date }>>('products');
 
     // 1) Check cache + freshness
     const existing = await products.findOne(

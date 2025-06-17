@@ -70,8 +70,7 @@ export default async function ProductPage({ params }: Props) {
 
             <ReviewActions
               productId={product._id}
-              initialScore={product.verification_score}
-              initialGeneratedAt={generatedAt}
+              initialGeneratedAt={generatedAt.toISOString()}
             />
 
             <div className="text-center mt-8">

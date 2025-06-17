@@ -14,9 +14,11 @@ export default function ImageCarousel({ images, productName }: Props) {
   useEffect(() => {
     if (!mainApi) { return; }
     const onSelect = (api: CarouselApi) => {
-      setSelectedIndex(api.selectedScrollSnap());
-      if (thumbnailApi) {
-        thumbnailApi.scrollTo(api.selectedScrollSnap());
+      if (api) {
+        setSelectedIndex(api.selectedScrollSnap());
+        if (thumbnailApi) {
+          thumbnailApi.scrollTo(api.selectedScrollSnap());
+        }
       }
     };
     mainApi.on("select", onSelect);

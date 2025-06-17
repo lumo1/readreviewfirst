@@ -61,12 +61,12 @@ export default async function CategoryPage({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((p) => (
             <SuggestionCard
-              key={p._id}
+              key={p._id.toString()}
               suggestion={{
                 name: p.name,
                 category: p.category,
                 exists: true,
-                slug: p._id,
+                slug: p._id.toString(),
                 imageUrl: p.images?.[0] ?? null,
               }}
             />

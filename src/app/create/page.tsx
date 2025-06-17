@@ -45,9 +45,10 @@ export default function CreatePage() {
         // Redirect to the exact slug (_id) from the database:
         setStatus("Success! Redirecting...");
         router.replace(`/product/${data.product._id}`);
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error("Create failed:", e);
-        setError(`Failed to create product: ${e.message}`);
+        const message = e instanceof Error ? e.message : String(e);
+        setError(`Failed to create product: ${message}`);
       }
     };
 

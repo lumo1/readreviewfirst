@@ -47,8 +47,12 @@ export default function SearchResultsPage() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Unexpected error");
         setSuggestions(json.suggestions || []);
-      } catch (e: any) {
-        setError(e.message);
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          setError(e.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       }
 
       // done

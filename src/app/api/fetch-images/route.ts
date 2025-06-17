@@ -22,9 +22,12 @@ async function getGoogleImages(query: string): Promise<string[]> {
       console.warn(`[getGoogleImages] Google returned ${res.status} for "${query}"`);
       return [];
     }
-    const data: any = await res.json();
+    interface GoogleCustomSearchResponse {
+      items?: { link: string }[];
+    }
+    const data: GoogleCustomSearchResponse = await res.json();
     if (!Array.isArray(data.items) || data.items.length === 0) return [];
-    return data.items.map((item: any) => item.link as string);
+    return data.items.map((item) => item.link);
   } catch (err) {
     console.error("[getGoogleImages] network error:", err);
     return [];
@@ -51,7 +54,13 @@ async function getUnsplashImage(query: string): Promise<string | null> {
       console.warn(`[getUnsplashImage] Unsplash returned ${res.status} for "${query}"`);
       return null;
     }
-    const data: any = await res.json();
+    interface UnsplashPhoto {
+      urls?: { small?: string };
+    }
+    interface UnsplashResponse {
+      results?: UnsplashPhoto[];
+    }
+    const data: UnsplashResponse = await res.json();
     const photo = data.results?.[0];
     return photo?.urls?.small || null;
   } catch (err) {

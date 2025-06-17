@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     });
 
     return new NextResponse(buffer, { status: 200, headers });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Image proxy error for URL: ${imageUrl}`, error);
     return new NextResponse(
       "An error occurred while proxying the image.",

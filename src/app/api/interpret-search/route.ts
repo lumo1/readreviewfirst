@@ -115,13 +115,13 @@ export async function POST(req: NextRequest) {
           }
         },
         { $project: { _id:1, name:1, category:1, images:1, score: { $meta:"vectorSearchScore" } } }
-      ]).toArray();
+      ]).toArray() as Array<Product & { score?: number }>;
     } catch {
       // fallback to plain text hits if vector search fails
       existingRaw = await coll.find({ _id: { $in: textHits } })
                               .project({ name:1, category:1, images:1 })
-                              .toArray();
-      existingRaw.forEach(d => (d as any).score = 1);
+                              .toArray() as Array<Product & { score?: number }>;
+      existingRaw.forEach((d: Product & { score?: number }) => d.score = 1);
     }
   }
 

@@ -15,8 +15,8 @@ async function withRetry<T>(
   for (let i = 0; i < retries; i++) {
     try {
       return await fn();
-    } catch (err: any) {
-      lastError = err;
+    } catch (err: unknown) {
+      lastError = err as Error;
       console.warn(`Attempt ${i + 1} failed. Retrying in ${(delay * (i + 1)) / 1000}s…`);
       await new Promise((r) => setTimeout(r, delay * (i + 1)));
     }
@@ -39,8 +39,9 @@ async function getProductImages(query: string): Promise<string[]> {
     const res = await fetch(url);
     if (!res.ok) return [];
     const js  = await res.json();
+    type GoogleImageItem = { link: string };
     return Array.isArray(js.items) 
-      ? js.items.map((it: any) => it.link as string) 
+      ? js.items.map((it: GoogleImageItem) => it.link) 
       : [];
   } catch {
     return [];
