@@ -15,21 +15,29 @@ import Link from "next/link";
 type Props = { params: { slug: string[] } };
 
 export default async function ProductPage({ params }: Props) {
-  // await the dynamic params as per Next13
-  const { slug } = await params;
+  // Dynamic params arrive synchronously; no `await params`.
+  const { slug } = params;
   const uniqueId = slug.join("/");
 
   const client = new MongoClient(process.env.MONGODB_URI || "");
   let product: WithId<Product> | null = null;
   try {
     await client.connect();
-    product = await client.db("readreviewfirst")
-                          .collection<Product>("products")
-                          .findOne({ _id: uniqueId });
+    product = await client
+      .db("readreviewfirst")
+      .collection<Product>("products")
+      .findOne({ _id: uniqueId });
   } finally {
     await client.close();
   }
-  if (!product) return notFound();
+
+  if (!product) {
+    return notFound();
+  }
+
+  // Grab the most recent review version
+  const latestVersion = product.reviewHistory[product.reviewHistory.length - 1];
+  const { review, generatedAt } = latestVersion;
 
   return (
     <main className="flex justify-center bg-gray-50 p-8">
@@ -37,8 +45,8 @@ export default async function ProductPage({ params }: Props) {
         <Card>
           <CardHeader className="text-center">
             <CardTitle className="text-4xl">{product.name}</CardTitle>
-            <ReviewCallout summary={product.review.shortSummary} />
-            <StarRating rating={product.review.rating} />
+            <ReviewCallout summary={review.shortSummary} />
+            <StarRating rating={review.rating} />
           </CardHeader>
 
           <CardContent>
@@ -51,18 +59,19 @@ export default async function ProductPage({ params }: Props) {
             />
 
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Pros & Cons</h2>
-              <ProsConsPills pros={product.review.pros} cons={product.review.cons} />
+              <h2 className="text-2xl font-semibold mb-4">Pros &amp; Cons</h2>
+              <ProsConsPills pros={review.pros} cons={review.cons} />
             </div>
 
             <div className="mb-8">
               <h2 className="text-2xl font-semibold mb-4">Full Review</h2>
-              <TwoColMarkdown markdown={product.review.detailedReview} />
+              <TwoColMarkdown markdown={review.detailedReview} />
             </div>
 
             <ReviewActions
               productId={product._id}
               initialScore={product.verification_score}
+              initialGeneratedAt={generatedAt}
             />
 
             <div className="text-center mt-8">
@@ -72,9 +81,9 @@ export default async function ProductPage({ params }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block truncate max-w-xs text-center"
-                  title={product.review.cta}  // tooltip on overflow
+                  title={review.cta} // tooltip on overflow
                 >
-                  {product.review.cta}
+                  {review.cta}
                 </Link>
               </Button>
             </div>

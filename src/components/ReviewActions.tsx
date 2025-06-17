@@ -1,42 +1,66 @@
 // src/components/ReviewActions.tsx
 "use client";
-import { useState } from "react";
-import { Button } from "./ui/button";
 
-type Props = {
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+
+export default function ReviewActions({
+  productId,
+  initialGeneratedAt, // Date ISO from your DB
+}: {
   productId: string;
-  initialScore: number;
-};
+  initialGeneratedAt: string;
+}) {
+  const [lastGen, setLastGen] = useState<Date>(new Date(initialGeneratedAt));
+  const [cooldown, setCooldown] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
 
-export default function ReviewActions({ productId, initialScore }: Props) {
-  const [score, setScore] = useState(initialScore);
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+  // compute remaining seconds until 24h since lastGen
+  useEffect(() => {
+    const tick = () => {
+      const elapsed = (Date.now() - lastGen.getTime()) / 1000;
+      const rem = Math.max(0, 24 * 3600 - elapsed);
+      setCooldown(rem);
+    };
+    tick();
+    const iv = setInterval(tick, 60 * 1000);
+    return () => clearInterval(iv);
+  }, [lastGen]);
 
-  const handleVote = async (action: 'upvote' | 'downvote') => {
-    if (voted) return; // Prevent re-voting for simplicity
-    setVoted(action === 'upvote' ? 'up' : 'down');
-    
-    const response = await fetch('/api/verify-review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, action }),
+  const handleRegenerate = async () => {
+    if (cooldown > 0) return;
+    setLoading(true);
+    const res = await fetch("/api/regenerate-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId }),
     });
-    const data = await response.json();
-    setScore(data.newScore);
+    const json = await res.json();
+    if (res.ok) {
+      setLastGen(new Date(json.generatedAt));
+      // you might also want to refresh the page or re-fetch the review
+    } else {
+      console.error(json.error);
+    }
+    setLoading(false);
   };
 
+  const hours = Math.floor(cooldown / 3600);
+  const mins  = Math.floor((cooldown % 3600) / 60);
+
   return (
-    <div className="mt-6 p-4 border-t text-center">
-      <p className="text-sm font-semibold mb-2">Was this review helpful?</p>
-      <div className="flex justify-center items-center gap-4">
-        <Button onClick={() => handleVote('upvote')} disabled={!!voted} variant={voted === 'up' ? 'default' : 'outline'}>
-          👍 Looks Accurate
-        </Button>
-        <span className="font-bold text-lg w-12">{score}</span>
-        <Button onClick={() => handleVote('downvote')} disabled={!!voted} variant={voted === 'down' ? 'destructive' : 'outline'}>
-          👎 Seems Wrong
-        </Button>
-      </div>
+    <div className="flex justify-center space-x-4 mt-4">
+      <Button
+        onClick={handleRegenerate}
+        disabled={cooldown > 0 || loading}
+        variant="outline"
+      >
+        {loading
+          ? "Regenerating…"
+          : cooldown > 0
+          ? `Retry in ${hours}h${mins}m`
+          : "Regenerate Review"}
+      </Button>
     </div>
   );
 }
