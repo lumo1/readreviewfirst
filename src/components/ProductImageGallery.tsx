@@ -56,8 +56,12 @@ export default function ProductImageGallery({
         throw new Error(generateData.error || 'AI image generation failed.');
       }
       setImages(generateData.images);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
       setStatusText('');
